@@ -1,5 +1,4 @@
-# Disclaimer: Source code adapted from Haytham Fayek
-# http://haythamfayek.com/2016/04/21/speech-processing-for-machine-learning.html
+
 
 import numpy
 from scipy.fftpack import dct
@@ -9,6 +8,8 @@ class AudioUtility():
         self.signal = signal
         self.sample_rate = sample_rate
 
+    # Disclaimer: Source code for get_mfcc was adapted from Haytham Fayek's example
+    # http://haythamfayek.com/2016/04/21/speech-processing-for-machine-learning.html
     def get_mfcc(self, subsample_length=3.5, pre_emphasis=0.97, frame_size=0.025, frame_stride=0.01, NFFT=512, nfilt = 40, num_ceps=12, cep_lifter=22):
         #make sure we have enough data
         if int(subsample_length * self.sample_rate) > len(self.signal):

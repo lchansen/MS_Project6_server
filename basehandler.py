@@ -120,5 +120,8 @@ class BaseHandler(tornado.web.RequestHandler):
         tmp = json_str(value);
         self.write(tmp)
 
+    def get_current_user(self):
+        return self.get_secure_cookie("user")
+
 
 
