@@ -38,6 +38,7 @@ class UploadLabeledDatapointHandler(BaseHandler):
     def post(self):
         '''Save data point and class label to database
         '''
+        self.set_header("Content-Type", "application/json")
         try:
             data = json.loads(self.request.body.decode("utf-8"))
             signal = data['signal']
@@ -71,6 +72,7 @@ class RequestNewDatasetId(BaseHandler):
     def get(self):
         '''Get a new dataset ID for building a new dataset
         '''
+        self.set_header("Content-Type", "application/json")
         a = self.db.labeledinstances.find_one(sort=[("dsid", -1)])
         if a == None:
             newSessionId = 1
@@ -83,6 +85,7 @@ class UpdateModel(BaseHandler):
     def post(self):
         '''Train a new model (or update) for given dataset ID
         '''
+        self.set_header("Content-Type", "application/json")
         try:
             data = json.loads(self.request.body.decode("utf-8")) 
             dsid = data['dsid']
@@ -138,6 +141,7 @@ class PredictOne(BaseHandler):
     def post(self):
         '''Predict the class of a sent feature vector
         '''
+        self.set_header("Content-Type", "application/json")
         try:
             data = json.loads(self.request.body.decode("utf-8"))    
             dsid = data['dsid']
