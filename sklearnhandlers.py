@@ -50,16 +50,14 @@ class UploadLabeledDatapointHandler(BaseHandler):
             self.write_json({"status":"invalid request body"})
             return
 
-        try:
+        # try:
             #preprocess the audio, since we are only training the ML model on the mfcc transformation
-            au = AudioUtility(signal=signal, sample_rate=sample_rate)
-            filt, mfcc = au.get_filter_mfcc() #model must be trained on default kwargs
-            instance = mfcc.flatten()
-            finstance = [float(val) for val in instance] # just in case
+        au = AudioUtility(signal=signal, sample_rate=sample_rate)
+        filt, mfcc = au.get_filter_mfcc() #model must be trained on default kwargs
+        instance = mfcc.flatten()
+        finstance = [float(val) for val in instance] # just in case
 
-            dbid = self.db.labeledinstances.insert(
-            {"feature":finstance,"label":label,"dsid":dsid}
-            )
+        dbid = self.db.labeledinstances.insert({"feature":finstance,"label":label,"dsid":dsid})
         # except Exception as e:
         #     print(e)
         #     self.set_status(400) #Bad request
