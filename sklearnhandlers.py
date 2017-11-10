@@ -38,24 +38,31 @@ class UploadLabeledDatapointHandler(BaseHandler):
     def post(self):
         '''Save data point and class label to database
         '''
-        data = json.loads(self.request.body.decode("utf-8"))
+        try:
+            data = json.loads(self.request.body.decode("utf-8"))
+            signal = data['signal']
+            sample_rate = data['sample_rate']
+            label = data['label']
+            dsid  = data['dsid']
+        except:
+            self.write_json({"status":"invalid request body"})
+            return
 
-        #preprocess the audio, since we are only training the ML model on the mfcc transformation
-        au = AudioUtility(signal=data['signal'], sample_rate=data['sample_rate'])
-        filt, mfcc = au.get_filter_mfcc() #model must be trained on default kwargs
-        instance = mfcc.flatten()
-        finstance = [float(val) for val in instance] # just in case
-        label = data['label']
-        dsid  = data['dsid']
+        try:
+            #preprocess the audio, since we are only training the ML model on the mfcc transformation
+            au = AudioUtility(signal=signal, sample_rate=sample_rate)
+            filt, mfcc = au.get_filter_mfcc() #model must be trained on default kwargs
+            instance = mfcc.flatten()
+            finstance = [float(val) for val in instance] # just in case
 
-        dbid = self.db.labeledinstances.insert(
+            dbid = self.db.labeledinstances.insert(
             {"feature":finstance,"label":label,"dsid":dsid}
             )
-        self.write_json({"id":str(dbid),
-                         "feature":[str(len(finstance))+" Points Received",
-                         "min of: " +str(min(finstance)),
-                         "max of: " +str(max(finstance))],
-                         "label":label})
+        except:
+            self.write_json({"status":"error processing audio data"})
+            return
+
+        self.write_json({"status":"success"})
 
 class RequestNewDatasetId(BaseHandler):
     @tornado.web.authenticated
@@ -74,8 +81,15 @@ class UpdateModel(BaseHandler):
     def post(self):
         '''Train a new model (or update) for given dataset ID
         '''
-        data = json.loads(self.request.body.decode("utf-8")) 
-        dsid = data['dsid']
+        try:
+            data = json.loads(self.request.body.decode("utf-8")) 
+            dsid = data['dsid']
+            knn = data['knn']
+            svm = data['svm']
+        except:
+            self.write_json({"status":"invalid request body"})
+            return
+        
 
         # create feature vectors from database
         f=[]
@@ -114,22 +128,31 @@ class UpdateModel(BaseHandler):
 
         # send back the resubstitution accuracy
         # if training takes a while, we are blocking tornado!! No!!
-        self.write_json({"resubAccuracy":acc})
+        self.write_json({"status": "success", "resubAccuracies":acc})
 
 class PredictOne(BaseHandler):
     @tornado.web.authenticated
     def post(self):
         '''Predict the class of a sent feature vector
         '''
-        data = json.loads(self.request.body.decode("utf-8"))    
-        dsid = data['dsid']
-        clf_name = data['clf_name']
+        try:
+            data = json.loads(self.request.body.decode("utf-8"))    
+            dsid = data['dsid']
+            clf_name = data['clf_name']
+        except:
+            self.write_json({"status":"invalid request body"})
+            return
 
-        #preprocess the audio, since we are only training the ML model on the mfcc transformation
-        au = AudioUtility(signal=data['signal'], sample_rate=data['sample_rate'])
-        filt, mfcc = au.get_filter_mfcc() #model must be trained on default kwargs
-        instance = mfcc.flatten()
-        finstance = [float(val) for val in instance] # just in case
+        try:
+            #preprocess the audio, since we are only training the ML model on the mfcc transformation
+            au = AudioUtility(signal=data['signal'], sample_rate=data['sample_rate'])
+            filt, mfcc = au.get_filter_mfcc() #model must be trained on default kwargs
+            instance = mfcc.flatten()
+            finstance = [float(val) for val in instance] # just in case
+        except:
+            self.write_json({"status":"error processing audio"})
+            return
+        
 
         # load the model from the database if we need to (using pickle)
         # we are blocking tornado!! no!!
