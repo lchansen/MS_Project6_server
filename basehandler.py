@@ -120,8 +120,10 @@ class BaseHandler(tornado.web.RequestHandler):
         tmp = json_str(value);
         self.write(tmp)
 
+    # required override medhod for auth
     def get_current_user(self):
         return self.get_secure_cookie("user")
 
-
-
+    #pass the models we store in memory to each of the handlers
+    def initialize(self, models):
+     self.models = models

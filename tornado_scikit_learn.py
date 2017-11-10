@@ -33,15 +33,25 @@ class Application(tornado.web.Application):
         '''Store necessary handlers,
            connect to database
         '''
+        models = {}
+        # format for above object ^
+        # {
+        #     dsidX: {
+        #         'knn': {},
+        #         'svm' {},
+        #         ...
+        #     },
+        #     ....
+        # }
 
         handlers = [(r"/[/]?", BaseHandler),
-                    (r"/Handlers[/]?",        skh.PrintHandlers),
-                    (r"/AddDataPoint[/]?",    skh.UploadLabeledDatapointHandler),
-                    (r"/GetNewDatasetId[/]?", skh.RequestNewDatasetId),
-                    (r"/UpdateModel[/]?",     skh.UpdateModelForDatasetId),     
-                    (r"/PredictOne[/]?",      skh.PredictOneFromDatasetId),    
-                    (r"/Login[/]?",           hd.LoginHandler),
-                    (r"/Logout[/]?",          hd.LogoutHandler),          
+                    (r"/Handlers[/]?",        skh.PrintHandlers,                 dict(models=models)),
+                    (r"/AddDataPoint[/]?",    skh.UploadLabeledDatapointHandler, dict(models=models)),
+                    (r"/GetNewDatasetId[/]?", skh.RequestNewDatasetId,           dict(models=models)),
+                    (r"/UpdateModel[/]?",     skh.UpdateModel,                   dict(models=models)),     
+                    (r"/PredictOne[/]?",      skh.PredictOne,                    dict(models=models)),    
+                    (r"/Login[/]?",           hd.LoginHandler,                   dict(models=models)),
+                    (r"/Logout[/]?",          hd.LogoutHandler,                  dict(models=models)),          
                     ]
 
         self.handlers_string = str(handlers)
@@ -55,11 +65,7 @@ class Application(tornado.web.Application):
         except ServerSelectionTimeoutError as inst:
             print('Could not initialize database connection, stopping execution')
             print('Are you running a valid local-hosted instance of mongodb?')
-            #raise inst
         
-        self.clf = {} # the classifier model (in-class assignment, you might need to change this line!)
-        # but depending on your implementation, you may not need to change it  ¯\_(ツ)_/¯
-
         settings = {
             'debug': True,
             'cookie_secret': 'D0N7_U$3_TH!$_1N_PR0D',

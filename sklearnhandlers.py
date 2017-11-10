@@ -10,11 +10,19 @@ from tornado.options import define, options
 
 from basehandler import BaseHandler
 
+# model imports
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.svm import SVC
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import Pipeline
+from sklearn.preprocessing import StandardScaler
+
 import pickle
 from bson.binary import Binary
 import json
 import numpy as np
+
+from audioutility import AudioUtility
 
 class PrintHandlers(BaseHandler):
     def get(self):
@@ -30,19 +38,22 @@ class UploadLabeledDatapointHandler(BaseHandler):
         '''
         data = json.loads(self.request.body.decode("utf-8"))
 
-        vals = data['feature']
-        fvals = [float(val) for val in vals]
+        #preprocess the audio, since we are only training the ML model on the mfcc transformation
+        au = AudioUtility(signal=data['signal'], sample_rate=data['sample_rate'])
+        filt, mfcc = au.get_filter_mfcc() #model must be trained on default kwargs
+        instance = mfcc.flatten()
+        finstance = [float(val) for val in instance] # just in case
         label = data['label']
-        sess  = data['dsid']
+        dsid  = data['dsid']
 
         dbid = self.db.labeledinstances.insert(
-            {"feature":fvals,"label":label,"dsid":sess}
+            {"feature":finstance,"label":label,"dsid":dsid}
             )
         self.write_json({"id":str(dbid),
-            "feature":[str(len(fvals))+" Points Received",
-                    "min of: " +str(min(fvals)),
-                    "max of: " +str(max(fvals))],
-            "label":label})
+                         "feature":[str(len(finstance))+" Points Received",
+                         "min of: " +str(min(finstance)),
+                         "max of: " +str(max(finstance))],
+                         "label":label})
 
 class RequestNewDatasetId(BaseHandler):
     def get(self):
@@ -55,7 +66,7 @@ class RequestNewDatasetId(BaseHandler):
             newSessionId = float(a['dsid'])+1
         self.write_json({"dsid":newSessionId})
 
-class UpdateModelForDatasetId(BaseHandler):
+class UpdateModel(BaseHandler):
     def get(self):
         '''Train a new model (or update) for given dataset ID
         '''
@@ -71,44 +82,57 @@ class UpdateModelForDatasetId(BaseHandler):
         for a in self.db.labeledinstances.find({"dsid":dsid}): 
             l.append(a['label'])
 
-        #IMPL: Update only the model for that DSID
-        if dsid not in self.clf:
-            self.clf[dsid] = KNeighborsClassifier(n_neighbors=1)
+        self.models[dsid] = {} # clear current models
+        self.models[dsid]['knn'] = KNeighborsClassifier(n_neighbors=1) #TODO: make this a qstr variable
+        self.models[dsid]['svm'] = SVC() #TODO: pass in a variable here
+
         # fit the model to the data
-        acc = -1
+        acc = {}
         if l:
-            self.clf[dsid].fit(f,l) # training
-            lstar = self.clf[dsid].predict(f)
-            #self.clf = c1
-            acc = sum(lstar==l)/float(len(l))
-            bytes = pickle.dumps(self.clf[dsid])
-            self.db.models.update({"dsid":dsid},
-                {  "$set": {"model":Binary(bytes)}  },
-                upsert=True)
+            for key, clf in self.models[dsid].items():
+                clf.fit(f,l)
+                lstar = clf.predict(f)
+                acc[key] = sum(lstar==l)/float(len(l))
+                bytes = pickle.dumps(clf)
+
+                set_obj = {}
+                set_obj[key+'_model'] = Binary(bytes)
+
+                self.db.models.update(
+                    {
+                        "dsid":dsid
+                    },
+                    {  
+                        "$set": set_obj
+                    },
+                    upsert=True)
 
         # send back the resubstitution accuracy
         # if training takes a while, we are blocking tornado!! No!!
         self.write_json({"resubAccuracy":acc})
 
-class PredictOneFromDatasetId(BaseHandler):
+class PredictOne(BaseHandler):
     def post(self):
         '''Predict the class of a sent feature vector
         '''
         data = json.loads(self.request.body.decode("utf-8"))    
+        dsid = data['dsid']
+        clf_name = data['clf_name']
 
-        vals = data['feature']
-        fvals = [float(val) for val in vals]
-        fvals = np.array(fvals).reshape(1, -1)
-        dsid  = data['dsid']
+        #preprocess the audio, since we are only training the ML model on the mfcc transformation
+        au = AudioUtility(signal=data['signal'], sample_rate=data['sample_rate'])
+        filt, mfcc = au.get_filter_mfcc() #model must be trained on default kwargs
+        instance = mfcc.flatten()
+        finstance = [float(val) for val in instance] # just in case
 
-        a = self.db.labeledinstances.find(sort=[("dsid", -1)])
-        print(a)
-
-        # load the model from the database (using pickle)
+        # load the model from the database if we need to (using pickle)
         # we are blocking tornado!! no!!
-        if dsid not in self.clf:
+        if dsid not in self.models:
             print('Loading Model From DB')
             tmp = self.db.models.find_one({"dsid":dsid})
-            self.clf[dsid] = pickle.loads(tmp['model'])
-        predLabel = self.clf[dsid].predict(fvals)
+            for key in tmp.keys():
+                if '_model' in key:
+                    self.models[dsid][key[:-6]] = pickle.loads(tmp[key])
+
+        predLabel = self.models[dsid][clf_name].predict(finstance)
         self.write_json({"prediction":str(predLabel)})
