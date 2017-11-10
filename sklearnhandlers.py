@@ -101,6 +101,9 @@ class PredictOneFromDatasetId(BaseHandler):
         fvals = np.array(fvals).reshape(1, -1)
         dsid  = data['dsid']
 
+        a = self.db.labeledinstances.find(sort=[("dsid", -1)])
+        print(a)
+
         # load the model from the database (using pickle)
         # we are blocking tornado!! no!!
         if dsid not in self.clf:
