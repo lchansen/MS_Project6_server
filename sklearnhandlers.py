@@ -45,6 +45,7 @@ class UploadLabeledDatapointHandler(BaseHandler):
             label = data['label']
             dsid  = data['dsid']
         except:
+            self.set_status(400) #Bad request
             self.write_json({"status":"invalid request body"})
             return
 
@@ -59,6 +60,7 @@ class UploadLabeledDatapointHandler(BaseHandler):
             {"feature":finstance,"label":label,"dsid":dsid}
             )
         except:
+            self.set_status(400) #Bad request
             self.write_json({"status":"error processing audio data"})
             return
 
@@ -74,7 +76,7 @@ class RequestNewDatasetId(BaseHandler):
             newSessionId = 1
         else:
             newSessionId = float(a['dsid'])+1
-        self.write_json({"dsid":newSessionId})
+        self.write_json({"status": "success", "dsid":newSessionId})
 
 class UpdateModel(BaseHandler):
     @tornado.web.authenticated
@@ -87,6 +89,7 @@ class UpdateModel(BaseHandler):
             knn = data['knn']
             svm = data['svm']
         except:
+            self.set_status(400) #Bad request
             self.write_json({"status":"invalid request body"})
             return
         
@@ -140,6 +143,7 @@ class PredictOne(BaseHandler):
             dsid = data['dsid']
             clf_name = data['clf_name']
         except:
+            self.set_status(400) #Bad request
             self.write_json({"status":"invalid request body"})
             return
 
@@ -150,6 +154,7 @@ class PredictOne(BaseHandler):
             instance = mfcc.flatten()
             finstance = [float(val) for val in instance] # just in case
         except:
+            self.set_status(400) #Bad request
             self.write_json({"status":"error processing audio"})
             return
         
@@ -164,4 +169,4 @@ class PredictOne(BaseHandler):
                     self.models[dsid][key[:-6]] = pickle.loads(tmp[key])
 
         predLabel = self.models[dsid][clf_name].predict(finstance)
-        self.write_json({"prediction":str(predLabel)})
+        self.write_json({"status": "success", "prediction":str(predLabel)})
