@@ -85,6 +85,7 @@ class UpdateModel(BaseHandler):
         '''Train a new model (or update) for given dataset ID
         '''
         self.set_header("Content-Type", "application/json")
+        f_res = {"status": "success"}
         try:
             data = json.loads(self.request.body.decode("utf-8")) 
             dsid = data['dsid']
@@ -121,7 +122,7 @@ class UpdateModel(BaseHandler):
                 for key, clf in self.models[dsid].items():
                     clf.fit(f,l)
                     lstar = clf.predict(f)
-                    acc[key] = sum(lstar==l)/float(len(l))
+                    f_res[key] = sum(lstar==l)/float(len(l))
                     bytes = pickle.dumps(clf)
 
                     set_obj = {}
@@ -142,7 +143,7 @@ class UpdateModel(BaseHandler):
 
         # send back the resubstitution accuracy
         # if training takes a while, we are blocking tornado!! No!!
-        self.write_json({"status": "success", "resubAccuracies":acc})
+        self.write_json(f_res)
 
 class PredictOne(BaseHandler):
     @tornado.web.authenticated
