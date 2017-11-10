@@ -60,7 +60,8 @@ class UploadLabeledDatapointHandler(BaseHandler):
             dbid = self.db.labeledinstances.insert(
             {"feature":finstance,"label":label,"dsid":dsid}
             )
-        except:
+        except Exception as e:
+            print(e)
             self.set_status(400) #Bad request
             self.write_json({"status":"error processing audio data"})
             return
