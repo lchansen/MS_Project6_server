@@ -122,7 +122,7 @@ class UpdateModel(BaseHandler):
                 for key, clf in self.models[dsid].items():
                     clf.fit(f,l)
                     lstar = clf.predict(f)
-                    f_res[key] = sum(lstar==l)/float(len(l))
+                    f_res[key] = str(sum(lstar==l)/float(len(l)))
                     bytes = pickle.dumps(clf)
 
                     set_obj = {}
