@@ -25,6 +25,7 @@ import numpy as np
 from audioutility import AudioUtility
 
 class PrintHandlers(BaseHandler):
+    @tornado.web.authenticated
     def get(self):
         '''Write out to screen the handlers used
         This is a nice debugging example!
@@ -33,6 +34,7 @@ class PrintHandlers(BaseHandler):
         self.write(self.application.handlers_string.replace('),','),\n'))
 
 class UploadLabeledDatapointHandler(BaseHandler):
+    @tornado.web.authenticated
     def post(self):
         '''Save data point and class label to database
         '''
@@ -56,6 +58,7 @@ class UploadLabeledDatapointHandler(BaseHandler):
                          "label":label})
 
 class RequestNewDatasetId(BaseHandler):
+    @tornado.web.authenticated
     def get(self):
         '''Get a new dataset ID for building a new dataset
         '''
@@ -67,10 +70,12 @@ class RequestNewDatasetId(BaseHandler):
         self.write_json({"dsid":newSessionId})
 
 class UpdateModel(BaseHandler):
-    def get(self):
+    @tornado.web.authenticated
+    def post(self):
         '''Train a new model (or update) for given dataset ID
         '''
-        dsid = self.get_int_arg("dsid",default=0)
+        data = json.loads(self.request.body.decode("utf-8")) 
+        dsid = data['dsid']
 
         # create feature vectors from database
         f=[]
@@ -83,8 +88,8 @@ class UpdateModel(BaseHandler):
             l.append(a['label'])
 
         self.models[dsid] = {} # clear current models
-        self.models[dsid]['knn'] = KNeighborsClassifier(n_neighbors=1) #TODO: make this a qstr variable
-        self.models[dsid]['svm'] = SVC() #TODO: pass in a variable here
+        self.models[dsid]['knn'] = KNeighborsClassifier(**data['knn'])
+        self.models[dsid]['svm'] = SVC(**data['svm'])
 
         # fit the model to the data
         acc = {}
@@ -112,6 +117,7 @@ class UpdateModel(BaseHandler):
         self.write_json({"resubAccuracy":acc})
 
 class PredictOne(BaseHandler):
+    @tornado.web.authenticated
     def post(self):
         '''Predict the class of a sent feature vector
         '''

@@ -31,11 +31,12 @@ class LoginHandler(BaseHandler):
         self.finish()
 
 class LogoutHandler(BaseHandler):
+    @tornado.web.authenticated
     def get(self):
         self.clear_cookie("user")
         self.set_status(200) # OK
         self.finish()
-
+    @tornado.web.authenticated
     def post(self):
         self.clear_cookie("user")
         self.set_status(200) # OK
