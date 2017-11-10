@@ -5,7 +5,7 @@ from scipy.fftpack import dct
 
 class AudioUtility():
     def __init__(self, signal=None, sample_rate=None):
-        self.signal = signal
+        self.signal = [float(x) for x in signal]
         self.sample_rate = sample_rate
 
     # Disclaimer: Source code for get_mfcc was adapted from Haytham Fayek's example
