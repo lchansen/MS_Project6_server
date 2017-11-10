@@ -24,7 +24,7 @@ import sklearnhandlers as skh
 import handlers as hd
 
 # Setup information for tornado class
-define("port", default=8000, help="run on the given port", type=int)
+define("port", default=80, help="run on the given port", type=int)
 
 # Utility to be used when creating the Tornado server
 # Contains the handlers and the database connection
